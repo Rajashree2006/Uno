@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UNO Game with AI Tutor</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #222;
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        gap: 40px;
+        padding: 20px;
+    }
+
+    .player-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+    }
+
+    .player-label {
+        font-weight: bold;
+        font-size: 18px;
+        margin-bottom: 8px;
+    }
+
+    .cards {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+        min-height: 100px;
+        padding: 10px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 12px;
+    }
+
+    .card {
+        width: 60px;
+        height: 90px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 16px;
+        color: white;
+        box-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+        transition: transform 0.2s;
+        cursor: pointer;
+        text-align: center;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 2px 5px 12px rgba(0,0,0,0.7);
+    }
+
+    .red { background-color: #e53935; }
+    .yellow { background-color: #fdd835; color: #222; }
+    .green { background-color: #43a047; }
+    .blue { background-color: #1e88e5; }
+    .wild { background: linear-gradient(45deg, red, yellow, green, blue); color: #222; font-size: 14px; }
+
+    .uno-button {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 12px;
+        background: linear-gradient(145deg, #ffeb3b, #fbc02d);
+        color: #222;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 2px 2px 8px rgba(0,0,0,0.6);
+        transition: transform 0.2s, background 0.3s;
+        font-size: 16px;
+    }
+
+    .uno-button:hover {
+        transform: scale(1.1);
+        background: linear-gradient(145deg, #fbc02d, #ffeb3b);
+    }
+
+    .avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background-size: cover;
+        border: 2px solid #fff;
+    }
+
+    .user-avatar { background-image: url('https://cdn-icons-png.flaticon.com/512/194/194938.png'); }
+    .system-avatar { background-image: url('https://cdn-icons-png.flaticon.com/512/186/186967.png'); }
+
+    .play-area {
+        width: 80%;
+        min-height: 120px;
+        border: 2px dashed #fff;
+        border-radius: 12px;
+        margin: 20px 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 16px;
+        text-align: center;
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .ai-hint {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 240px;
+        min-height: 80px;
+        background: linear-gradient(135deg, #ffeb3b, #fbc02d);
+        color: #222;
+        padding: 14px;
+        border-radius: 16px;
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        box-shadow: 2px 2px 12px rgba(0,0,0,0.7);
+        font-size: 14px;
+        flex-direction: column;
+        transition: transform 0.2s;
+    }
+
+    .ai-hint:hover {
+        transform: scale(1.05);
+        box-shadow: 4px 4px 16px rgba(0,0,0,0.8);
+    }
+
+    .ai-hint h3 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: bold;
+    }
+
+    .ai-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-image: url('https://cdn-icons-png.flaticon.com/512/4712/4712268.png');
+        background-size: cover;
+    }
+</style>
+</head>
+<body>
+
+<div class="player-container">
+    <div class="player-label">User</div>
+    <div class="avatar user-avatar"></div>
+    <div class="cards" id="user-cards"></div>
+</div>
+
+<div class="play-area" id="play-area">Drag and drop cards here</div>
+
+<div class="player-container">
+    <div class="player-label">System</div>
+    <div class="avatar system-avatar"></div>
+    <div class="cards" id="system-cards"></div>
+</div>
+
+<button class="uno-button">UNO!</button>
+
+<div class="ai-hint">
+    <div class="ai-icon"></div>
+    <h3>AI UNO Tutor: Beginner Friendly</h3>
+    <div id="hint-text">Play a card that matches the top color to keep your turn active. Wild cards can change the color!</div>
+</div>
+
+<script>
+    const colors = ['red', 'yellow', 'green', 'blue'];
+    const numbers = ['0','1','2','3','4','5','6','7','8','9','10','11']; // extra numbers
+    const specials = ['Skip', 'Reverse', 'Draw Two'];
+    const wilds = ['Wild', 'Wild Draw Four'];
+
+    function createDeck() {
+        const deck = [];
+        for (let color of colors) {
+            for (let number of numbers) deck.push({color, value: number});
+            for (let special of specials) deck.push({color, value: special});
+        }
+        for (let wild of wilds) deck.push({color: 'wild', value: wild});
+        return deck;
+    }
+
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    function dealCards(deck) {
+        const userHand = deck.slice(0, 10);
+        const systemHand = deck.slice(10, 20);
+        return { userHand, systemHand };
+    }
+
+    function renderCards(hand, containerId) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+        hand.forEach(card => {
+            const cardDiv = document.createElement('div');
+            cardDiv.classList.add('card', card.color);
+            cardDiv.textContent = card.value;
+            container.appendChild(cardDiv);
+        });
+    }
+
+    const deck = shuffle(createDeck());
+    const { userHand, systemHand } = dealCards(deck);
+    renderCards(userHand, 'user-cards');
+    renderCards(systemHand, 'system-cards');
+</script>
+
+</body>
+</html>
+
+
+
+
+
+

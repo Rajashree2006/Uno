@@ -1,0 +1,172 @@
+
+
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>UNO Game - Step 1</title>
+
+<style>
+body {
+    background:#222;
+    color:white;
+    font-family:Arial;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:30px;
+    padding:20px;
+}
+
+h3 {
+    margin:5px;
+}
+
+.cards {
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    justify-content:center;
+    min-height:110px;
+    padding:10px;
+    background:rgba(255,255,255,0.05);
+    border-radius:12px;
+}
+
+.card {
+    width:70px;
+    height:100px;
+    border-radius:10px;
+    object-fit:cover;
+    cursor:grab;
+    transition:transform 0.2s;
+}
+
+.card:hover {
+    transform:translateY(-5px);
+}
+
+.play-area {
+    width:90px;
+    height:130px;
+    border:3px dashed white;
+    border-radius:15px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(255,255,255,0.05);
+}
+</style>
+</head>
+
+<body>
+
+<h3>User</h3>
+<div class="cards" id="user-cards"></div>
+
+<div class="play-area" id="play-area"></div>
+<p>(Drag card to play. Click center to draw new card)</p>
+
+<h3>System</h3>
+<div class="cards" id="system-cards"></div>
+
+<script>
+
+let userCards = [];
+let systemCards = [];
+let topCard = null;
+
+const cardBackImage =
+"https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Card_back_01.svg/200px-Card_back_01.svg.png";
+
+// SIMPLE TEST CARDS (no randomness for debugging)
+function initializeGame(){
+
+    userCards = [
+        "Red_5","Blue_3","Green_7",
+        "Yellow_1","Red_Skip","Wild",
+        "Blue_9"
+    ];
+
+    systemCards = [
+        "X","X","X","X","X","X","X"
+    ];
+
+    topCard = "Yellow_4";
+}
+
+function renderCards(){
+
+    const userContainer=document.getElementById("user-cards");
+    const systemContainer=document.getElementById("system-cards");
+
+    userContainer.innerHTML="";
+    systemContainer.innerHTML="";
+
+    // USER CARDS
+    userCards.forEach((card,index)=>{
+        const img=document.createElement("img");
+        img.src="/static/"+card+".jpg";
+        img.classList.add("card");
+        img.draggable=true;
+
+        img.addEventListener("dragstart",(e)=>{
+            e.dataTransfer.setData("index",index);
+        });
+
+        userContainer.appendChild(img);
+    });
+
+    // SYSTEM CARDS (FORCED 7 BACK CARDS)
+    for(let i=0;i<systemCards.length;i++){
+        const img=document.createElement("img");
+        img.src=cardBackImage;
+        img.classList.add("card");
+        systemContainer.appendChild(img);
+    }
+}
+
+function showTopCard(){
+    const playArea=document.getElementById("play-area");
+    playArea.innerHTML="";
+
+    const img=document.createElement("img");
+    img.src="/static/"+topCard+".jpg";
+    img.classList.add("card");
+
+    playArea.appendChild(img);
+}
+
+// Drag & Drop
+const playArea=document.getElementById("play-area");
+
+playArea.addEventListener("dragover",(e)=>{
+    e.preventDefault();
+});
+
+playArea.addEventListener("drop",(e)=>{
+    e.preventDefault();
+
+    const index=e.dataTransfer.getData("index");
+
+    if(index!==null){
+        topCard=userCards[index];
+        userCards.splice(index,1);
+
+        showTopCard();
+        renderCards();
+    }
+});
+
+// Draw card
+playArea.addEventListener("click",()=>{
+    userCards.push("Red_2");
+    renderCards();
+});
+
+initializeGame();
+renderCards();
+showTopCard();
+
+</script>

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>UNO Game</title>
+
+<style>
+body{
+    background:#1b1b1b;
+    color:white;
+    font-family:Arial;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:20px;
+}
+
+h2{margin-bottom:20px;}
+
+.cards{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:center;
+    min-height:120px;
+}
+
+/* USER CARD IMAGE */
+.card-img{
+    width:70px;
+    height:100px;
+    border-radius:10px;
+    object-fit:cover;
+    cursor:grab;
+    transition:0.2s;
+}
+
+.card-img:hover{
+    transform:translateY(-5px);
+}
+
+/* SYSTEM BACK CARD (NO IMAGE) */
+.card-back{
+    width:70px;
+    height:100px;
+    border-radius:10px;
+    background: radial-gradient(circle at center, #ffeb3b 10%, #e53935 35%, #b71c1c 80%);
+    border:3px solid white;
+    position:relative;
+}
+
+/* white oval */
+.card-back::before{
+    content:"";
+    position:absolute;
+    width:80%;
+    height:50%;
+    background:white;
+    border-radius:50%;
+    top:25%;
+    left:10%;
+    transform:rotate(-20deg);
+}
+
+/* UNO text */
+.card-back::after{
+    content:"UNO";
+    position:absolute;
+    top:35%;
+    left:28%;
+    color:red;
+    font-weight:bold;
+    font-size:18px;
+    transform:rotate(-20deg);
+}
+
+.play-area{
+    width:150px;
+    height:200px;
+    border:3px dashed white;
+    border-radius:15px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin:20px;
+}
+
+.deck{
+    width:70px;
+    height:100px;
+    background:#333;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    margin-bottom:10px;
+}
+</style>
+</head>
+<body>
+
+<h2>UNO Game</h2>
+
+<h3>System</h3>
+<div class="cards" id="system-cards"></div>
+
+<div class="deck" id="draw-deck">DRAW</div>
+
+<div class="play-area" id="play-area"></div>
+
+<h3>User</h3>
+<div class="cards" id="user-cards"></div>
+
+<script>
+const colors=["Red","Yellow","Green","Blue"];
+const numbers=["0","1","2","3","4","5","6","7","8","9"];
+const wilds=["Wild"];
+
+let deck=[];
+let userHand=[];
+let systemHand=[];
+let topCard=null;
+
+function createDeck(){
+    deck=[];
+    colors.forEach(color=>{
+        numbers.forEach(num=>{
+            deck.push(color+"_"+num);
+        });
+    });
+    wilds.forEach(w=>{
+        deck.push(w);
+    });
+}
+
+function shuffle(){
+    deck.sort(()=>Math.random()-0.5);
+}
+
+function deal(){
+    userHand=deck.splice(0,7);
+    systemHand=deck.splice(0,7);
+    topCard=deck.pop();
+}
+
+function render(){
+    renderUser();
+    renderSystem();
+    renderTop();
+}
+
+function renderUser(){
+    const container=document.getElementById("user-cards");
+    container.innerHTML="";
+    userHand.forEach((card,index)=>{
+        const img=document.createElement("img");
+        img.src="static/"+card+".png";  // MUST match your image extension
+        img.className="card-img";
+        img.draggable=true;
+
+        img.ondragstart=(e)=>{
+            e.dataTransfer.setData("index",index);
+        };
+
+        img.onerror=function(){
+            console.log("Missing image:",this.src);
+        };
+
+        container.appendChild(img);
+    });
+}
+
+function renderSystem(){
+    const container=document.getElementById("system-cards");
+    container.innerHTML="";
+    systemHand.forEach(()=>{
+        const div=document.createElement("div");
+        div.className="card-back";
+        container.appendChild(div);
+    });
+}
+
+function renderTop(){
+    const area=document.getElementById("play-area");
+    area.innerHTML="";
+    const img=document.createElement("img");
+    img.src="static/"+topCard+".png";
+    img.className="card-img";
+    area.appendChild(img);
+}
+
+function isValid(card){
+    if(card==="Wild") return true;
+
+    const topParts=topCard.split("_");
+    const cardParts=card.split("_");
+
+    return topParts[0]===cardParts[0] ||
+           topParts[1]===cardParts[1];
+}
+
+document.getElementById("play-area").ondragover=(e)=>e.preventDefault();
+
+document.getElementById("play-area").ondrop=(e)=>{
+    const index=e.dataTransfer.getData("index");
+    const selected=userHand[index];
+
+    if(isValid(selected)){
+        topCard=selected;
+        userHand.splice(index,1);
+        render();
+        setTimeout(aiMove,1000);
+    }else{
+        alert("Invalid move!");
+    }
+};
+
+document.getElementById("draw-deck").onclick=()=>{
+    if(deck.length>0){
+        userHand.push(deck.pop());
+        render();
+    }
+};
+
+function aiMove(){
+    let played=false;
+
+    for(let i=0;i<systemHand.length;i++){
+        if(isValid(systemHand[i])){
+            topCard=systemHand[i];
+            systemHand.splice(i,1);
+            played=true;
+            break;
+        }
+    }
+
+    if(!played && deck.length>0){
+        systemHand.push(deck.pop());
+    }
+
+    render();
+}
+
+createDeck();
+shuffle();
+deal();
+render();
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

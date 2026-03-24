@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>UNO Game</title>
+
+<style>
+
+body{
+    margin:0;
+    font-family:Arial;
+    background:linear-gradient(135deg,#141e30,#243b55);
+    color:white;
+    text-align:center;
+}
+
+h1{
+    margin-top:10px;
+}
+
+.game{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:20px;
+}
+
+.cards{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+}
+
+.cards img{
+    width:90px;
+    margin:5px;
+    cursor:pointer;
+    transition:0.2s;
+}
+
+.cards img:hover{
+    transform:scale(1.1);
+}
+
+.systemCard{
+    width:90px;
+    height:130px;
+    background:lavender;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:black;
+    font-weight:bold;
+    margin:5px;
+}
+
+.middle{
+    display:flex;
+    align-items:center;
+    gap:30px;
+}
+
+#topCard{
+    width:120px;
+}
+
+button{
+    padding:10px 20px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+.controls{
+    margin-top:20px;
+}
+
+.score{
+    font-size:20px;
+    margin-top:10px;
+}
+
+/* NEW */
+#turn{
+    font-size:22px;
+    font-weight:bold;
+    color:#00ffcc;
+}
+
+#message{
+    font-size:18px;
+    color:#ffd700;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>UNO</h1>
+
+<div class="score" id="score"></div>
+
+<!-- NEW TURN INDICATOR -->
+<div id="turn"></div>
+
+<!-- SYSTEM MESSAGE -->
+<div id="message"></div>
+
+<div class="game">
+
+<div>
+<h3>System</h3>
+<div id="systemCards" class="cards"></div>
+</div>
+
+<div class="middle">
+
+<button onclick="drawCard()">Draw</button>
+
+<img id="topCard">
+
+<button onclick="getHint()">AI Hint</button>
+
+</div>
+
+<div id="hint"></div>
+
+<div>
+<h3>You</h3>
+<div id="playerCards" class="cards"></div>
+</div>
+
+<div class="controls">
+
+<button onclick="startGame()">Start Game</button>
+
+<button onclick="callUNO()">UNO</button>
+
+</div>
+
+</div>
+
+<script>
+
+function startGame(){
+
+fetch("/start")
+.then(r=>r.json())
+.then(updateGame)
+
+}
+
+function drawCard(){
+
+fetch("/draw")
+.then(r=>r.json())
+.then(updateGame)
+
+}
+
+function playCard(card){
+
+let color=null
+
+if(card.startsWith("Wild")){
+
+color=prompt("Choose color: Red, Blue, Green, Yellow")
+
+if(!color){
+alert("Color required!")
+return
+}
+
+}
+
+fetch("/play",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+card:card,
+color:color
+})
+
+})
+.then(r=>r.json())
+.then(updateGame)
+
+}
+
+function callUNO(){
+
+fetch("/uno")
+.then(r=>r.json())
+.then(data=>{
+
+if(data.success){
+alert("UNO called!")
+}else{
+alert("UNO not valid now!")
+}
+
+})
+
+}
+
+function getHint(){
+
+fetch("/hint")
+.then(r=>r.json())
+.then(data=>{
+document.getElementById("hint").innerText=
+"AI Suggests: "+data.hint
+})
+
+}
+
+function updateGame(data){
+
+if(data.error){
+alert(data.error)
+return
+}
+
+// SCORE
+document.getElementById("score").innerText=
+"Player: "+data.player_score+
+"  |  System: "+data.system_score
+
+// TURN INDICATOR
+if(data.turn === "player"){
+document.getElementById("turn").innerText="🟢 Your Turn"
+}else{
+document.getElementById("turn").innerText="🔴 System Turn"
+}
+
+// TOP CARD
+document.getElementById("topCard").src=
+"/static/"+data.current_card
+
+// SYSTEM MESSAGE
+if(data.message){
+document.getElementById("message").innerText=data.message
+}
+
+// ✅ WILD COLOR POPUP
+if(data.wild_color){
+alert("System chose color: " + data.wild_color)
+}
+
+// ✅ WINNER POPUP
+if(data.winner){
+
+if(data.winner === "player"){
+alert("🎉 You win this round!")
+}else{
+alert("💻 System wins this round!")
+}
+
+}
+
+// PLAYER CARDS
+let playerDiv=document.getElementById("playerCards")
+playerDiv.innerHTML=""
+
+data.player_hand.forEach(card=>{
+
+let img=document.createElement("img")
+
+img.src="/static/"+card
+
+img.onclick=()=>playCard(card)
+
+playerDiv.appendChild(img)
+
+})
+
+// SYSTEM CARDS
+let sysDiv=document.getElementById("systemCards")
+sysDiv.innerHTML=""
+
+for(let i=0;i<data.system_count;i++){
+
+let card=document.createElement("div")
+card.className="systemCard"
+card.innerText="UNO"
+
+sysDiv.appendChild(card)
+
+}
+
+}
+
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+
